@@ -1,0 +1,6 @@
+{
+  "name": "BuildTrack",
+  "description": "BuildTrack is a smartphone-first construction management app for Indian SMB builders. It features photo-verified attendance with wage calculation, real-time material tracking with low-stock alerts, automated progress logging, and a site-aware AI assistant.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
