@@ -3,6 +3,7 @@ export type ProjectStatus = 'active' | 'completed' | 'delayed';
 export type MaterialStatus = 'OK' | 'Low' | 'Out';
 export type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'blocked';
 export type AttendanceStatus = 'present' | 'absent' | 'leave';
+export type TabType = 'materials' | 'tasks' | 'attendance' | 'progress' | 'expenses' | 'assistant';
 
 export interface UserProfile {
   uid: string;
@@ -21,6 +22,7 @@ export interface Project {
   status: ProjectStatus;
   phase: string;
   completion: number;
+  imageUrl?: string;
   createdAt: string;
   _isSyncing?: boolean;
 }
@@ -96,4 +98,18 @@ export interface Reply {
   content: string;
   createdAt: string;
   _isSyncing?: boolean;
+}
+
+export type NotificationType = 'attendance' | 'low_material' | 'new_task' | 'task_completed';
+
+export interface SiteNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  projectId: string;
+  projectName: string;
+  timestamp: string;
+  isRead: boolean;
+  relatedId?: string;
 }

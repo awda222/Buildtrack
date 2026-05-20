@@ -7,6 +7,37 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // 9. Root Announcements (Global Community)
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidAnnouncement(request.resource.data);
+      allow update: if isSignedIn() && (
+        (incoming().authorId == request.auth.uid && isValidAnnouncement(incoming())) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'dislikes']))
+      );
+      allow delete: if isSignedIn() && (existing().authorId == request.auth.uid || isBuilder());
+
+      function isValidAnnouncement(data) {
+        return data.keys().hasAll(['authorId', 'content'])
+          && data.authorId == request.auth.uid
+          && data.content is string && data.content.size() <= 2000;
+      }
+
+      match /replies/{replyId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && isValidReply(request.resource.data);
+        allow update: if isSignedIn() && existing().authorId == request.auth.uid && isValidReply(incoming());
+        allow delete: if isSignedIn() && (existing().authorId == request.auth.uid || isBuilder());
+
+        function isValidReply(data) {
+          return data.keys().hasAll(['announcementId', 'authorId', 'content'])
+            && data.announcementId == announcementId
+            && data.authorId == request.auth.uid
+            && data.content is string && data.content.size() <= 1000;
+        }
+      }
+    }
+
     // 0.1 Global Helpers
     function isSignedIn() { return request.auth != null; }
     function isEmailVerified() { return request.auth.token.email_verified == true; }

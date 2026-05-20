@@ -6,8 +6,10 @@ import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { Project, Material, Task } from '../../types';
+import { useAuth } from '../../App';
 
 export default function Assistant({ projectId }: { projectId: string }) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; text: string }[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,9 +42,14 @@ export default function Assistant({ projectId }: { projectId: string }) {
         tasks: tasksSnap.docs.map(d => d.data()),
       };
 
+      const token = await user?.getIdToken();
+      
       const response = await fetch('/api/assistant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ message: userMessage, projectData }),
       });
       

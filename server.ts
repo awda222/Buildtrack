@@ -3,15 +3,20 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import admin from "firebase-admin";
 
 dotenv.config();
+
+// Initialize Firebase Admin for backend protection
+admin.initializeApp({
+  projectId: "rational-striker-r07pf" // From firebase-applet-config.json
+});
 
 const app = express();
 const PORT = 3000;
 
-// Initialize Gemini
+// Initialize Gemini (Will use process.env.GEMINI_API_KEY or Application Default Credentials)
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
   httpOptions: {
     headers: {
       'User-Agent': 'aistudio-build',
@@ -21,26 +26,59 @@ const ai = new GoogleGenAI({
 
 app.use(express.json());
 
+// Auth Middleware
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Unauthorized: Missing token' });
+    return;
+  }
+
+  const token = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    (req as any).user = decodedToken;
+    next();
+  } catch (err: any) {
+    console.error('Verify token error:', err);
+    res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    return;
+  }
+};
+
 // API: Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
 // API: Gemini Chat
-app.post("/api/assistant", async (req, res) => {
+app.post("/api/assistant", requireAuth, async (req, res) => {
   try {
-    const { message, projectData } = req.body;
+    const { message, projectData, userProfile } = req.body;
     
     const systemInstruction = `
-      You are BuildTrack Assistant, a specialized AI for Indian construction builders and supervisors.
-      You are site-aware. Here is the current project state:
+      You are "BuildTrack Site Intelligence" (SI), an elite AI Construction Consultant specializing in Indian civil engineering and site management.
+      
+      USER CONTEXT:
+      - Name: ${userProfile?.displayName || 'Builder'}
+      - Role: ${userProfile?.role || 'Site Supervisor'}
+      
+      SITE TELEMETRY (Current Projects):
       ${JSON.stringify(projectData, null, 2)}
       
-      Your goal is to help builders manage material stock, track tasks, and estimate quantities.
-      - Use simple, direct language.
-      - If stock is low for a material, mention it if relevant to the user's question.
-      - You can answer technical questions about mix ratios (e.g., M20, M25 concrete) or quantities.
-      - Support code-mixing (English and common Hindi construction terms like 'sariya' for rebar, 'bore' for well, etc. if appropriate).
+      CORE CAPABILITIES:
+      1. Technical Expert: You know mix designs (M20, M25), curing times, rebar (sariya) requirements, and IS codes.
+      2. Material Strategist: You monitor site stock. If the user asks about progress, warn them if critical materials like cement or sand are low.
+      3. Safety First: Always advocate for PPE (Hardhats, boots) and site safety.
+      4. Language: Use professional yet accessible English. You can use common Indian construction terms (e.g., "PCC", "RCC", "shuttering", "centering", "fine aggregate").
+      
+      COMMUNICATION STYLE:
+      - Be direct and authoritative.
+      - Use Markdown (bold, lists) for clarity.
+      - Address the user by their name (${userProfile?.displayName}) if appropriate.
+      - If a query is ambiguous, ask for technical specifics (e.g., "What is the slab area?" or "What grade of concrete are you using?").
+      
+      When the user says "Namaste", respond with a professional greeting tailored to their role.
     `;
 
     const response = await ai.models.generateContent({
@@ -48,6 +86,7 @@ app.post("/api/assistant", async (req, res) => {
       contents: message,
       config: {
         systemInstruction,
+        temperature: 0.7,
       },
     });
 

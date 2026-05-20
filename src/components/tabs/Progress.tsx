@@ -55,42 +55,58 @@ export default function Progress({ projectId }: { projectId: string }) {
               const isFuture = index > currentPhaseIndex;
 
               return (
-                <div 
+                <motion.div 
                   key={phase.name}
                   onClick={() => updatePhase(phase.name, isPast ? 100 : index === 0 ? 0 : 0)}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                   className={cn(
                     "flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer",
                     isCurrent ? "bg-white border-orange-500 shadow-lg ring-4 ring-orange-500/5 scale-[1.02]" : 
-                    isPast ? "bg-green-50 border-green-100 opacity-60" : "bg-white border-stone-100 opacity-40 grayscale"
+                    isPast ? "bg-green-50 border-green-100 opacity-60 hover:opacity-100" : "bg-white border-stone-100 opacity-40 grayscale hover:grayscale-0"
                   )}
                 >
-                  <div className={cn(
-                    "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
-                    isPast ? "bg-green-800 text-white" : isCurrent ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-400"
-                  )}>
+                  <motion.div 
+                    initial={false}
+                    animate={{ scale: isCurrent ? [1, 1.1, 1] : 1 }}
+                    transition={{ duration: 1, repeat: isCurrent ? Infinity : 0, repeatDelay: 2 }}
+                    className={cn(
+                      "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                      isPast ? "bg-green-800 text-white" : isCurrent ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-400"
+                    )}
+                  >
                     {isPast ? <CheckCircle2 className="h-6 w-6" /> : <span className="text-sm font-black">{index + 1}</span>}
-                  </div>
+                  </motion.div>
                   
                   <div className="flex-1">
                     <h4 className="font-black text-xs uppercase tracking-tight text-green-900">{phase.name}</h4>
                     {isCurrent && (
-                      <div className="mt-2 space-y-2">
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="mt-2 space-y-2 relative"
+                      >
                         <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-orange-600">
                            <span>Current Progress</span>
-                           <span>{project.completion}%</span>
+                           <motion.span
+                             key={project.completion}
+                             initial={{ opacity: 0, y: -10 }}
+                             animate={{ opacity: 1, y: 0 }}
+                           >{project.completion}%</motion.span>
                         </div>
                         <input 
                           type="range"
-                          className="w-full h-1.5 bg-orange-100 rounded-full appearance-none cursor-pointer accent-orange-600"
+                          className="w-full h-1.5 bg-orange-100 rounded-full appearance-none cursor-pointer accent-orange-600 outline-none transition-all hover:h-2"
                           value={project.completion}
                           onChange={(e) => updatePhase(phase.name, parseInt(e.target.value))}
                         />
-                      </div>
+                      </motion.div>
                     )}
                   </div>
                   
-                  {isCurrent && <div className="animate-pulse h-2 w-2 rounded-full bg-orange-600" />}
-                </div>
+                  {isCurrent && <motion.div animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="h-2 w-2 rounded-full bg-orange-600" />}
+                </motion.div>
               );
             })}
           </div>

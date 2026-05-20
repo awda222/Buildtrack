@@ -7,12 +7,15 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, signIn, signOut, db } from './lib/firebase';
-import { UserProfile, Project } from './types';
+import { UserProfile, Project, TabType } from './types';
 import Dashboard from './components/Dashboard';
 import ProjectDetail from './components/ProjectDetail';
+import CommunityView from './components/CommunityView';
+import AssistantView from './components/AssistantView';
 import { Layout } from './components/Layout';
 import { LogIn, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNotifications } from './hooks/useNotifications';
 
 interface AuthContextType {
   user: User | null;
@@ -29,6 +32,9 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [initialTab, setInitialTab] = useState<TabType | undefined>(undefined);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'sites' | 'community' | 'assistant'>('dashboard');
+  const { notifications, unreadCount, markAllAsRead, lastAlert } = useNotifications(user);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -98,24 +104,34 @@ export default function App() {
     );
   }
 
+  const handleSelectProject = (id: string, tab?: TabType) => {
+    setSelectedProjectId(id);
+    setInitialTab(tab);
+  };
+
+  const handleNavigate = (view: 'sites' | 'community' | 'assistant' | 'dashboard') => {
+    setSelectedProjectId(null);
+    setInitialTab(undefined);
+    setCurrentView(view);
+  };
+
   return (
     <AuthContext.Provider value={{ user, profile, loading }}>
       <Layout 
-        onHome={() => setSelectedProjectId(null)}
+        onHome={() => handleNavigate('dashboard')}
+        onSites={() => handleNavigate('sites')}
+        onCommunity={() => handleNavigate('community')}
+        onAssistant={() => handleNavigate('assistant')}
+        activeView={selectedProjectId ? 'project' : currentView}
         onSignOut={signOut}
         profile={profile}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkRead={markAllAsRead}
+        lastAlert={lastAlert}
       >
         <AnimatePresence mode="wait">
-          {!selectedProjectId ? (
-            <motion.div
-              key="dashboard"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-            >
-              <Dashboard onSelectProject={setSelectedProjectId} />
-            </motion.div>
-          ) : (
+          {selectedProjectId ? (
             <motion.div
               key="project"
               initial={{ opacity: 0, x: 20 }}
@@ -124,8 +140,48 @@ export default function App() {
             >
               <ProjectDetail 
                 projectId={selectedProjectId} 
-                onBack={() => setSelectedProjectId(null)} 
+                initialTab={initialTab}
+                onBack={() => {
+                  setSelectedProjectId(null);
+                  setInitialTab(undefined);
+                }} 
               />
+            </motion.div>
+          ) : currentView === 'sites' ? (
+            <motion.div
+              key="sites"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <Dashboard onSelectProject={handleSelectProject} displayMode="sites" onNavigate={handleNavigate} />
+            </motion.div>
+          ) : currentView === 'community' ? (
+            <motion.div
+              key="community"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <CommunityView />
+            </motion.div>
+          ) : currentView === 'assistant' ? (
+            <motion.div
+              key="assistant"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <AssistantView />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <Dashboard onSelectProject={handleSelectProject} displayMode="dashboard" onNavigate={handleNavigate} />
             </motion.div>
           )}
         </AnimatePresence>
