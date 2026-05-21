@@ -1,9 +1,9 @@
-export type Role = 'builder' | 'supervisor' | 'worker';
+export type Role = 'builder' | 'supervisor' | 'site_manager' | 'architect' | 'contractor';
 export type ProjectStatus = 'active' | 'completed' | 'delayed';
 export type MaterialStatus = 'OK' | 'Low' | 'Out';
 export type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'blocked';
 export type AttendanceStatus = 'present' | 'absent' | 'leave';
-export type TabType = 'materials' | 'tasks' | 'attendance' | 'progress' | 'expenses' | 'assistant';
+export type TabType = 'materials' | 'tasks' | 'attendance' | 'progress' | 'expenses' | 'assistant' | 'whatsapp';
 
 export interface UserProfile {
   uid: string;

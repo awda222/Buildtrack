@@ -11,7 +11,26 @@ export function useNotifications(user: any) {
   const seenNotifs = useRef(new Set<string>());
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    if (user.uid === 'local-guest-123') {
+      import('../demoData').then(mod => {
+        const notifs = mod.DEMO_NOTIFICATIONS.map(n => ({
+          ...n,
+          isRead: n.read,
+          message: n.message,
+          projectId: n.projectId,
+          timestamp: n.createdAt
+        })) as any[];
+        setNotifications(notifs);
+        setUnreadCount(notifs.filter(n => !n.isRead).length);
+      });
+      return () => {};
+    }
 
     const unsubscribes: (() => void)[] = [];
 

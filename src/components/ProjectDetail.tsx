@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Project, Material, Task, Attendance, Announcement, TabType } from '../types';
@@ -8,12 +8,14 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import Materials from './tabs/Materials';
-import Tasks from './tabs/Tasks';
-import AttendanceTab from './tabs/Attendance';
-import Progress from './tabs/Progress';
-import Assistant from './tabs/Assistant';
-import Expenses from './tabs/Expenses';
+
+const Materials = lazy(() => import('./tabs/Materials'));
+const Tasks = lazy(() => import('./tabs/Tasks'));
+const AttendanceTab = lazy(() => import('./tabs/Attendance'));
+const Progress = lazy(() => import('./tabs/Progress'));
+const Assistant = lazy(() => import('./tabs/Assistant'));
+const Expenses = lazy(() => import('./tabs/Expenses'));
+const WhatsApp = lazy(() => import('./tabs/WhatsApp'));
 
 interface ProjectDetailProps {
   projectId: string;
@@ -61,6 +63,7 @@ export default function ProjectDetail({ projectId, initialTab, onBack }: Project
     { id: 'expenses', label: 'Expenses', icon: BarChart3, color: 'text-amber-600' },
     { id: 'progress', label: 'Progress', icon: BarChart3, color: 'text-orange-600' },
     { id: 'assistant', label: 'Assistant', icon: MessageSquare, color: 'text-indigo-600' },
+    { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, color: 'text-emerald-500' },
   ];
 
   return (
@@ -127,23 +130,30 @@ export default function ProjectDetail({ projectId, initialTab, onBack }: Project
       </div>
 
       {/* Tab Content */}
-      <div className="mt-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {activeTab === 'materials' && <Materials projectId={projectId} />}
-            {activeTab === 'tasks' && <Tasks projectId={projectId} />}
-            {activeTab === 'attendance' && <AttendanceTab projectId={projectId} />}
-            {activeTab === 'expenses' && <Expenses projectId={projectId} />}
-            {activeTab === 'progress' && <Progress projectId={projectId} />}
-            {activeTab === 'assistant' && <Assistant projectId={projectId} />}
-          </motion.div>
-        </AnimatePresence>
+      <div className="mt-6 min-h-[400px]">
+        <Suspense fallback={
+          <div className="flex h-64 items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+          </div>
+        }>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {activeTab === 'materials' && <Materials projectId={projectId} />}
+              {activeTab === 'tasks' && <Tasks projectId={projectId} />}
+              {activeTab === 'attendance' && <AttendanceTab projectId={projectId} />}
+              {activeTab === 'expenses' && <Expenses projectId={projectId} />}
+              {activeTab === 'progress' && <Progress projectId={projectId} />}
+              {activeTab === 'assistant' && <Assistant projectId={projectId} />}
+              {activeTab === 'whatsapp' && <WhatsApp projectId={projectId} />}
+            </motion.div>
+          </AnimatePresence>
+        </Suspense>
       </div>
     </div>
   );

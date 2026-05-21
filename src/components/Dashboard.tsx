@@ -35,6 +35,19 @@ export default function Dashboard({ onSelectProject, displayMode, onNavigate }: 
 
   useEffect(() => {
     if (!user) return;
+    if (user.uid === 'local-guest-123') {
+      import('../demoData').then(mod => {
+        const projs = mod.DEMO_PROJECTS as any[];
+        setProjects(projs);
+        const totalProgress = projs.reduce((acc, p) => acc + (p.progress || p.completion || 0), 0);
+        setStats(prev => ({
+          ...prev,
+          avgProgress: projs.length > 0 ? Math.round(totalProgress / projs.length) : 0
+        }));
+      });
+      return;
+    }
+
     const q = query(collection(db, 'projects'), where('builderId', '==', user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const projs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
@@ -56,6 +69,18 @@ export default function Dashboard({ onSelectProject, displayMode, onNavigate }: 
   useEffect(() => {
     if (projects.length === 0) {
       setStats(prev => ({ ...prev, laborCount: 0, alertCount: 0, pendingTasks: 0 }));
+      return;
+    }
+    
+    if (user?.uid === 'local-guest-123') {
+      // Mock stats for demo user
+      setStats(prev => ({
+        ...prev,
+        laborCount: 24,
+        alertCount: 4,
+        pendingTasks: 42,
+        expenditure: 845000
+      }));
       return;
     }
 
@@ -146,14 +171,21 @@ export default function Dashboard({ onSelectProject, displayMode, onNavigate }: 
     e.preventDefault();
     if (!user || !newProject.name) return;
     try {
-      await addDoc(collection(db, 'projects'), {
+      const newProjData = {
         ...newProject,
         builderId: user.uid,
         status: 'active',
         phase: 'Excavation',
         completion: 0,
         createdAt: new Date().toISOString()
-      });
+      };
+      
+      if (user.uid === 'local-guest-123') {
+        const p = { id: `proj-${Date.now()}`, ...newProjData };
+        setProjects([p as any, ...projects]);
+      } else {
+        await addDoc(collection(db, 'projects'), newProjData);
+      }
       setNewProject({ name: '', location: '', imageUrl: '' });
       setIsAdding(false);
     } catch (err) {
@@ -163,7 +195,11 @@ export default function Dashboard({ onSelectProject, displayMode, onNavigate }: 
 
   const handleDeleteProject = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'projects', id));
+      if (user?.uid === 'local-guest-123') {
+        setProjects(projects.filter(p => p.id !== id));
+      } else {
+        await deleteDoc(doc(db, 'projects', id));
+      }
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, 'projects');
     }
